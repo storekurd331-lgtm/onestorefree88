@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>One Store</title>
+    <link href="https://vjs.zencdn.net/7.20.3/video-js.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/videojs-playlist@5.0.0/dist/videojs-playlist.min.js"></script>
+    <style>
+        :root { --main-color: #00bcd4; --bg-color: #0f172a; --card-bg: #1e293b; --text-color: #f8fafc; }
+        body { font-family: Tahoma, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding-bottom: 75px; user-select: none; -webkit-tap-highlight-color: transparent; }
+        header { background-color: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .logo-text { font-size: 1.2rem; font-weight: bold; color: #fff; text-transform: uppercase; }
+        .logo-text span { color: var(--main-color); }
+        .top-controls { display: flex; gap: 8px; }
+        .styled-select { background: #1e293b; color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; outline: none; }
+        .container { max-width: 1200px; margin: auto; padding: 12px; }
+        .ad-container { display: none; width: 100%; margin: 5px 0 15px 0; text-align: center; overflow: hidden; border-radius: 12px; }
+        .ad-container img { width: 100%; max-height: 90px; object-fit: cover; display: block; }
+        .player-container { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; z-index: 99999; flex-direction: column; justify-content: center; align-items: center; }
+        .player-header { width: 100%; padding: 15px; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; position: absolute; top: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); z-index: 10; }
+        .back-btn { background-color: rgba(255, 255, 255, 0.2); color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: bold; }
+        .video-js { width: 100% !important; height: 100vh !important; }
+        .section-title { font-size: 1.1rem; margin: 15px 0 10px 0; display: flex; align-items: center; gap: 8px; font-weight: bold; color: #94a3b8; }
+        .section-title i { color: var(--main-color); }
+        .channels-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        @media (max-width: 480px) { .channels-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; } }
+        @media (min-width: 768px) { .channels-grid { grid-template-columns: repeat(6, 1fr); } }
+        .channel-card { background-color: var(--card-bg); border-radius: 14px; overflow: hidden; position: relative; aspect-ratio: 1/1; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: transform 0.2s; }
+        .channel-card:active { transform: scale(0.95); }
+        .channel-img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
+        .channel-overlay-name { position: absolute; bottom: 0; left: 0; width: 100%; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); padding: 6px 2px; font-size: 0.7rem; font-weight: bold; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; }
+        .fav-icon { position: absolute; top: 6px; right: 6px; color: rgba(255,255,255,0.4); font-size: 0.85rem; z-index: 5; }
+        .channel-card.is-fav .fav-icon { color: #ef4444; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background-color: rgba(15, 23, 42, 0.95); backdrop-filter: blur(15px); border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-around; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); z-index: 1000; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #64748b; background: none; border: none; font-size: 0.7rem; font-weight: bold; cursor: pointer; width: 20%; }
+        .nav-item i { font-size: 1.25rem; }
+        .nav-item.active { color: var(--main-color); }
+        .no-channels { padding: 30px; text-align: center; color: #64748b; font-size: 0.85rem; grid-column: 1 / -1; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-text">ONE<span>STORE</span></div>
+        <div class="top-controls">
+            <select class="styled-select" id="pkgSelector" onchange="filterPackage(this.value)">
+                <option value="all">هەمووی ☰</option>
+                <option value="kurdish">Kurdish</option>
+                <option value="kurdish-local">Kurdish Local</option>
+                <option value="sport">Sport</option>
+                <option value="movies">Movies</option>
+            </select>
+            <select class="styled-select" id="langSelector" onchange="changeLanguage(this.value)">
+                <option value="ku">Kurdî</option>
+                <option value="ar">العربية</option>
+                <option value="en">English</option>
+            </select>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="ad-container" id="adWrapper">
+            <a id="adLink" href="#" target="_blank"><img id="adImage" src="" alt="Ad"></a>
+        </div>
+
+        <div class="player-container" id="playerWrapper">
+            <div class="player-header">
+                <h3 style="color:white; margin:0; font-size:1rem;" id="currentChannelName">Content</h3>
+                <button class="back-btn" onclick="closePlayer()">◀ گەڕانەوە</button>
+            </div>
+            <video id="iptv-player" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto"></video>
+        </div>
+
+        <div class="section-title">
+            <i class="fa-solid fa-play"></i> <span id="sectionTitleText">کەناڵەکان</span>
+        </div>
+        
+        <div class="channels-grid" id="channelsContainer"></div>
+    </div>
+
+    <div class="bottom-nav">
+        <button class="nav-item active" id="nav-home" onclick="switchTab('home')"><i class="fa-solid fa-border-all"></i><span id="lbl-home">سەرەکی</span></button>
+        <button class="nav-item" id="nav-movies" onclick="switchTab('movies')"><i class="fa-solid fa-clapperboard"></i><span id="lbl-movies">فیلم</span></button>
+        <button class="nav-item" id="nav-series" onclick="switchTab('series')"><i class="fa-solid fa-tv"></i><span id="lbl-series">زنجیرە</span></button>
+        <button class="nav-item" id="nav-fav" onclick="switchTab('fav')"><i class="fa-solid fa-heart"></i><span id="lbl-fav">دڵخواز</span></button>
+        <button class="nav-item" id="nav-code" onclick="checkAccessCode()"><i class="fa-solid fa-key"></i><span id="lbl-code">کۆد</span></button>
+    </div>
+
+    <script>
+        const defaultChannels = [
+            { name: "Rudaw TV", logo: "https://www.rudaw.net/Content/images/rudaw-logo.png", link: "https://rudaw.live/rudawtv/index.m3u8", package: "kurdish" }
+        ];
+
+        const translations = {
+            ku: { all: "هەمووی ☰", home: "Serekî", movies: "Fîlm", series: "Zencîre", fav: "Dilxwaz", code: "Kۆd", channels: "کەناڵە بەردەستەکان", empty: "هیچ ناوەڕۆکێک لێرەدا نییە.", promptCode: "تکایە کۆدی چوونەژوورەوە بنووسە:", wrongCode: "کۆدەکەت هەڵەیە!" },
+            ar: { all: "الكل ☰", home: "الرئيسية", movies: "أفلام", series: "مسلسلات", fav: "المفضلة", code: "كود", channels: "القنوات المتاحة", empty: "لا يوجد محتوى هنا.", promptCode: "رجاءً أدخل كود الدخول:", wrongCode: "الكود خاطئ!" },
+            en: { all: "All ☰", home: "Home", movies: "Movies", series: "Series", fav: "Favorites", code: "Code", channels: "Available Channels", empty: "No content available here.", promptCode: "Please enter the access code:", wrongCode: "Incorrect code!" }
+        };
+
+        let currentLang = localStorage.getItem('iptv_lang') || 'ku';
+        let channels = JSON.parse(localStorage.getItem('iptv_channels')) || defaultChannels;
+        let favorites = JSON.parse(localStorage.getItem('iptv_favs')) || [];
+        let currentFilter = 'all';
+        let currentActiveTab = 'home';
+        const channelsContainer = document.getElementById('channelsContainer');
+        let player = videojs('iptv-player', { autoplay: true, controls: true, muted: false });
+
+        function changeLanguage(lang) {
+            currentLang = lang; localStorage.setItem('iptv_lang', lang);
+            document.documentElement.dir = (lang === 'en') ? 'ltr' : 'rtl';
+            document.getElementById('pkgSelector').options[0].text = translations[lang].all;
+            document.getElementById('lbl-home').innerText = translations[lang].home;
+            document.getElementById('lbl-movies').innerText = translations[lang].movies;
+            document.getElementById('lbl-series').innerText = translations[lang].series;
+            document.getElementById('lbl-fav').innerText = translations[lang].fav;
+            document.getElementById('lbl-code').innerText = translations[lang].code;
+            updateSectionTitle(); displayChannels();
+        }
+
+        function checkAccessCode() {
+            let userCode = prompt(translations[currentLang].promptCode);
+            if (userCode === "krd123") {
+                window.open('https://wa.me/9647701262611', '_blank');
+            } else if (userCode !== null) { alert(translations[currentLang].wrongCode); }
+        }
+
+        function updateSectionTitle() {
+            let titleText = translations[currentLang].channels;
+            if(currentActiveTab === 'movies') titleText = translations[currentLang].movies;
+            if(currentActiveTab === 'series') titleText = translations[currentLang].series;
+            if(currentActiveTab === 'fav') titleText = translations[currentLang].fav;
+            document.getElementById('sectionTitleText').innerText = titleText;
+        }
+
+        function applySettings() {
+            let settings = JSON.parse(localStorage.getItem('iptv_settings')) || { mainColor: '#00bcd4', bgColor: '#0f172a', adImg: '', adUrl: '' };
+            document.documentElement.style.setProperty('--main-color', settings.mainColor);
+            document.documentElement.style.setProperty('--bg-color', settings.bgColor);
+            const adWrapper = document.getElementById('adWrapper');
+            if(settings.adImg && settings.adImg.trim() !== '') {
+                document.getElementById('adImage').src = settings.adImg;
+                document.getElementById('adLink').href = settings.adUrl || '#';
+                adWrapper.style.display = 'block';
+            } else { adWrapper.style.display = 'none'; }
+        }
+
+        function filterPackage(pkg) { currentFilter = pkg; displayChannels(); }
+        function switchTab(tab) {
+            currentActiveTab = tab;
+            document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+            if(tab !== 'code') document.getElementById('nav-' + tab).classList.add('active');
+            updateSectionTitle(); displayChannels();
+        }
+
+        function toggleFav(id, event) {
+            event.stopPropagation();
+            favorites = favorites.includes(id) ? favorites.filter(f => f !== id) : [...favorites, id];
+            localStorage.setItem('iptv_favs', JSON.stringify(favorites)); displayChannels();
+        }
+
+        function displayChannels() {
+            channelsContainer.innerHTML = '';
+            let filtered = channels.filter(Boolean);
+            if (currentActiveTab === 'movies') filtered = filtered.filter(c => c.package === 'movies');
+            else if (currentActiveTab === 'series') filtered = filtered.filter(c => c.package === 'series');
+            else if (currentActiveTab === 'fav') filtered = filtered.filter(c => favorites.includes(c.name));
+            else if (currentFilter !== 'all') filtered = filtered.filter(c => c.package === currentFilter);
+
+            if(filtered.length === 0) {
+                channelsContainer.innerHTML = `<div class="no-channels">${translations[currentLang].empty}</div>`; return;
+            }
+            filtered.forEach((channel) => {
+                const isFav = favorites.includes(channel.name) ? 'is-fav' : '';
+                const card = document.createElement('div'); card.className = `channel-card ${isFav}`;
+                card.onclick = () => openAndPlayPlaylist(channel.name, channel.link);
+                card.innerHTML = `
+                    <i class="fa-solid fa-heart fav-icon" onclick="toggleFav('${channel.name}', event)"></i>
+                    <img class="channel-img" src="${channel.logo}" onerror="this.src='https://via.placeholder.com/150?text=One+Store'">
+                    <div class="channel-overlay-name">${channel.name}</div>
+                `;
+                channelsContainer.appendChild(card);
+            });
+        }
+
+        function openAndPlayPlaylist(name, sourceLinks) {
+            document.getElementById('playerWrapper').style.display = 'flex';
+            document.getElementById('currentChannelName').innerText = name;
+            let playlistData = sourceLinks.split(',').map(link => ({
+                sources: [{ src: link.trim(), type: link.includes('.mp4') ? 'video/mp4' : 'application/x-mpegURL' }]
+            }));
+            player.playlist(playlistData); player.playlist.autoadvance(0); player.playlist.first(); player.play().catch(e => console.log(e));
+        }
+        function closePlayer() { document.getElementById('playerWrapper').style.display = 'none'; player.pause(); }
+
+        window.addEventListener('storage', () => {
+            channels = JSON.parse(localStorage.getItem('iptv_channels')) || defaultChannels;
+            applySettings(); displayChannels();
+        });
+
+        applySettings(); changeLanguage(currentLang);
+    </script>
+</body>
+</html>
